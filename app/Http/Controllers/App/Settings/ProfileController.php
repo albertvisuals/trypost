@@ -126,7 +126,7 @@ class ProfileController extends Controller
 
             $user->workspaces()->detach();
 
-            if ($account && $user->isAccountOwner()) {
+            if ($account) {
             $account->delete();
             }
         });
