@@ -58,7 +58,7 @@ class TokenRefreshClient
 
         if ($response->failed()) {
             Log::error("TokenRefreshClient: {$name} token refresh failed", [
-                'body' => $this->redactBody($response->body()),
+                'body' => TokenRedactor::redact($response->body()),
             ]);
 
             $body = $response->json();
@@ -70,24 +70,5 @@ class TokenRefreshClient
         }
 
         return $response;
-    }
-
-    private function redactBody(string $body): string
-    {
-        return preg_replace(
-            [
-                '/access_token=([^&"\s]+)/',
-                '/"access_token"\s*:\s*"([^"]+)"/',
-                '/Bearer\s+\S+/',
-                '/"token"\s*:\s*"([^"]+)"/',
-            ],
-            [
-                'access_token=[REDACTED]',
-                '"access_token":"[REDACTED]"',
-                'Bearer [REDACTED]',
-                '"token":"[REDACTED]"',
-            ],
-            $body
-        );
     }
 }

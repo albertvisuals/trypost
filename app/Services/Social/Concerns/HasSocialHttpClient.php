@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Social\Concerns;
 
 use App\Models\PostPlatform;
+use App\Services\Social\TokenRedactor;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 
@@ -38,20 +39,6 @@ trait HasSocialHttpClient
 
     protected function redactResponseBody(string $body): string
     {
-        return preg_replace(
-            [
-                '/access_token=([^&"\s]+)/',
-                '/"access_token"\s*:\s*"([^"]+)"/',
-                '/Bearer\s+\S+/',
-                '/"token"\s*:\s*"([^"]+)"/',
-            ],
-            [
-                'access_token=[REDACTED]',
-                '"access_token":"[REDACTED]"',
-                'Bearer [REDACTED]',
-                '"token":"[REDACTED]"',
-            ],
-            $body
-        );
+        return TokenRedactor::redact($body);
     }
 }
