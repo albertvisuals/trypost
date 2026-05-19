@@ -16,7 +16,7 @@ return new class extends Migration
             $table->uuid('user_id')->nullable();
             $table->uuid('parent_id')->nullable();
             $table->text('body');
-            $table->json('reactions')->default('[]');
+            $table->json('reactions')->nullable()->default(null);
             $table->timestamps();
 
             $table->foreign('post_id')->references('id')->on('posts')->cascadeOnDelete();
