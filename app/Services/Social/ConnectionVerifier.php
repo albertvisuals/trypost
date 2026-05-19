@@ -112,10 +112,10 @@ class ConnectionVerifier
     private function refreshLinkedInToken(SocialAccount $account): void
     {
         if (! $account->refresh_token) {
-            throw new TokenExpiredException('No refresh token available for LinkedIn account');
+            throw new TokenExpiredException("No refresh token available for {$account->platform->label()} account");
         }
 
-        $response = TokenRefreshClient::for(Platform::LinkedIn)->send(fn () => Http::asForm()
+        $response = TokenRefreshClient::for($account->platform)->send(fn () => Http::asForm()
             ->post(config('trypost.platforms.linkedin.oauth_api').'/oauth/v2/accessToken', [
                 'grant_type' => 'refresh_token',
                 'refresh_token' => $account->refresh_token,

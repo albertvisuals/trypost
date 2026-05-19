@@ -34,7 +34,7 @@ class PinterestPublisher
         $account = $postPlatform->socialAccount;
 
         if ($account->is_token_expired || $account->is_token_expiring_soon) {
-            $this->refreshTokenWithLock($account, fn () => $this->refreshToken($account));
+            app(ConnectionVerifier::class)->refreshToken($account);
             $account->refresh();
         }
 
@@ -400,34 +400,13 @@ class PinterestPublisher
         );
     }
 
-    private function refreshToken(SocialAccount $account): void
-    {
-        $response = TokenRefreshClient::for(Platform::Pinterest)->send(fn () => Http::asForm()
-            ->withBasicAuth(
-                config('services.pinterest.client_id'),
-                config('services.pinterest.client_secret')
-            )
-            ->post($this->baseUrl.'/oauth/token', [
-                'grant_type' => 'refresh_token',
-                'refresh_token' => $account->refresh_token,
-            ]));
-
-        $data = $response->json();
-
-        $account->update([
-            'access_token' => data_get($data, 'access_token'),
-            'refresh_token' => data_get($data, 'refresh_token', $account->refresh_token),
-            'token_expires_at' => data_get($data, 'expires_in') ? now()->addSeconds(data_get($data, 'expires_in')) : now()->addDays(30),
-        ]);
-    }
-
     /**
      * Get user's boards for board selection.
      */
     public function getBoards(SocialAccount $account): array
     {
         if ($account->is_token_expired || $account->is_token_expiring_soon) {
-            $this->refreshTokenWithLock($account, fn () => $this->refreshToken($account));
+            app(ConnectionVerifier::class)->refreshToken($account);
             $account->refresh();
         }
 

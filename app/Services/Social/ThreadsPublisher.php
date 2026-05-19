@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 namespace App\Services\Social;
 
-use App\Enums\SocialAccount\Platform;
 use App\Exceptions\Social\ThreadsPublishException;
 use App\Models\PostPlatform;
-use App\Models\SocialAccount;
 use App\Services\Social\Concerns\HasSocialHttpClient;
 use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class ThreadsPublisher
@@ -33,7 +30,7 @@ class ThreadsPublisher
         $account = $postPlatform->socialAccount;
 
         if ($account->is_token_expired || $account->is_token_expiring_soon) {
-            $this->refreshTokenWithLock($account, fn () => $this->refreshToken($account));
+            app(ConnectionVerifier::class)->refreshToken($account);
             $account->refresh();
         }
 
@@ -301,25 +298,6 @@ class ThreadsPublisher
 
         Log::warning('Threads media processing timeout', ['container_id' => $containerId]);
         throw new \Exception('Threads media processing timeout after '.$maxAttempts.' attempts');
-    }
-
-    private function refreshToken(SocialAccount $account): void
-    {
-        // Threads uses long-lived tokens that can be refreshed
-        $response = TokenRefreshClient::for(Platform::Threads)->send(fn () => Http::get(config('trypost.platforms.threads.auth_api').'/refresh_access_token', [
-            'grant_type' => 'th_refresh_token',
-            'access_token' => $account->access_token,
-        ]));
-
-        $data = $response->json();
-
-        $newToken = data_get($data, 'access_token');
-
-        $account->update([
-            'access_token' => $newToken,
-            'refresh_token' => $newToken,
-            'token_expires_at' => data_get($data, 'expires_in') ? now()->addSeconds(data_get($data, 'expires_in')) : null,
-        ]);
     }
 
     private function handleApiError(Response $response): never

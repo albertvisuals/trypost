@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace App\Services\Social;
 
 use App\Enums\PostPlatform\ContentType;
-use App\Enums\SocialAccount\Platform;
 use App\Exceptions\Social\ErrorCategory;
 use App\Exceptions\Social\InstagramPublishException;
 use App\Models\PostPlatform;
-use App\Models\SocialAccount;
 use App\Services\Media\MediaOptimizer;
 use App\Services\Social\Concerns\HasSocialHttpClient;
 use Illuminate\Http\Client\Response;
@@ -32,7 +30,7 @@ class InstagramPublisher
         $this->baseUrl = $account->platform->instagramGraphBaseUrl();
 
         if ($account->is_token_expired || $account->is_token_expiring_soon) {
-            $this->refreshTokenWithLock($account, fn () => $this->refreshToken($account));
+            app(ConnectionVerifier::class)->refreshToken($account);
             $account->refresh();
         }
 
@@ -393,29 +391,6 @@ class InstagramPublisher
         }
 
         Log::warning('Instagram media processing timeout, proceeding anyway');
-    }
-
-    private function refreshToken(SocialAccount $account): void
-    {
-        // Instagram via Facebook uses page tokens that don't expire
-        if ($account->platform === Platform::InstagramFacebook) {
-            return;
-        }
-
-        $response = TokenRefreshClient::for(Platform::Instagram)->send(fn () => Http::get(config('trypost.platforms.instagram.auth_api').'/refresh_access_token', [
-            'grant_type' => 'ig_refresh_token',
-            'access_token' => $account->access_token,
-        ]));
-
-        $data = $response->json();
-        $newToken = data_get($data, 'access_token');
-
-        $account->update([
-            'access_token' => $newToken,
-            'refresh_token' => $newToken,
-            'token_expires_at' => data_get($data, 'expires_in') ? now()->addSeconds(data_get($data, 'expires_in')) : null,
-        ]);
-
     }
 
     private function handleApiError(Response $response): never

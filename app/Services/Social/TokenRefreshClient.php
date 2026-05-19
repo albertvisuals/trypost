@@ -49,7 +49,7 @@ class TokenRefreshClient
             throw new PlatformUnavailableException("{$name} API unreachable: {$e->getMessage()}");
         }
 
-        if ($response->serverError()) {
+        if ($response->serverError() || $response->status() === 429) {
             throw new PlatformUnavailableException(
                 "{$name} API returned {$response->status()} during token refresh",
                 $response->status(),

@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services\Social;
 
-use App\Enums\SocialAccount\Platform;
 use App\Models\PostPlatform;
 use App\Models\SocialAccount;
 use App\Services\Social\Concerns\HasSocialHttpClient;
 use Carbon\CarbonInterface;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class ThreadsAnalytics
@@ -49,7 +47,7 @@ class ThreadsAnalytics
         }
 
         if ($account->is_token_expired || $account->is_token_expiring_soon) {
-            $this->refreshTokenWithLock($account, fn () => $this->refreshToken($account));
+            app(ConnectionVerifier::class)->refreshToken($account);
             $account->refresh();
         }
 
@@ -81,7 +79,7 @@ class ThreadsAnalytics
     private function fetchMetricsFromApi(SocialAccount $account, CarbonInterface $since, CarbonInterface $until): array
     {
         if ($account->is_token_expired || $account->is_token_expiring_soon) {
-            $this->refreshTokenWithLock($account, fn () => $this->refreshToken($account));
+            app(ConnectionVerifier::class)->refreshToken($account);
             $account->refresh();
         }
 
@@ -137,20 +135,5 @@ class ThreadsAnalytics
     private function getHttpClient(): PendingRequest
     {
         return $this->socialHttp();
-    }
-
-    private function refreshToken(SocialAccount $account): void
-    {
-        $response = TokenRefreshClient::for(Platform::Threads)->send(fn () => Http::get(config('trypost.platforms.threads.auth_api').'/refresh_access_token', [
-            'grant_type' => 'th_refresh_token',
-            'access_token' => $account->access_token,
-        ]));
-
-        $data = $response->json();
-
-        $account->update([
-            'access_token' => data_get($data, 'access_token'),
-            'token_expires_at' => data_get($data, 'expires_in') ? now()->addSeconds(data_get($data, 'expires_in')) : null,
-        ]);
     }
 }

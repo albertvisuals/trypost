@@ -46,7 +46,7 @@ class LinkedInPublisher
         $this->hasRetried = false;
 
         if ($this->account->is_token_expired || $this->account->is_token_expiring_soon) {
-            $this->refreshTokenWithLock($this->account, fn () => $this->refreshToken($this->account));
+            app(ConnectionVerifier::class)->refreshToken($this->account);
             $this->account->refresh();
         }
 
@@ -75,7 +75,7 @@ class LinkedInPublisher
         $this->hasRetried = true;
 
         try {
-            $this->refreshToken($this->account);
+            app(ConnectionVerifier::class)->refreshToken($this->account);
             $this->account->refresh();
             $this->accessToken = $this->account->access_token;
 
@@ -431,32 +431,6 @@ class LinkedInPublisher
         }
 
         Log::warning('LinkedIn video processing timeout, proceeding anyway');
-    }
-
-    private function refreshToken(SocialAccount $account): void
-    {
-        if (! $account->refresh_token) {
-            throw new TokenExpiredException('No refresh token available for LinkedIn account');
-        }
-
-        $response = TokenRefreshClient::for(Platform::LinkedIn)->send(fn () => Http::asForm()
-            ->post(config('trypost.platforms.linkedin.oauth_api').'/oauth/v2/accessToken', [
-                'grant_type' => 'refresh_token',
-                'refresh_token' => $account->refresh_token,
-                'client_id' => config('services.linkedin.client_id'),
-                'client_secret' => config('services.linkedin.client_secret'),
-            ]));
-
-        $data = $response->json();
-
-        $account->update([
-            'access_token' => data_get($data, 'access_token'),
-            'refresh_token' => data_get($data, 'refresh_token', $account->refresh_token),
-            'token_expires_at' => data_get($data, 'expires_in') ? now()->addSeconds(data_get($data, 'expires_in')) : null,
-        ]);
-
-        // Sync tokens to LinkedIn Page if it exists
-        app(LinkedInTokenSynchronizer::class)->syncTokens($account);
     }
 
     private function handleApiError(Response $response): never
