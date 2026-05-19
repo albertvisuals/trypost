@@ -7,6 +7,7 @@ namespace App\Jobs;
 use App\Enums\Notification\Channel;
 use App\Enums\Notification\Type;
 use App\Enums\SocialAccount\Status;
+use App\Exceptions\PlatformUnavailableException;
 use App\Exceptions\TokenExpiredException;
 use App\Mail\WorkspaceConnectionsDisconnected;
 use App\Models\SocialAccount;
@@ -62,6 +63,16 @@ class VerifyWorkspaceConnections implements ShouldQueue
     {
         try {
             $verifier->verify($account);
+
+            return true;
+        } catch (PlatformUnavailableException $e) {
+            // Platform is down (5xx / network). The account's token is not
+            // provably bad — skip silently and try again next pass.
+            Log::warning('Social account verification skipped: platform unavailable', [
+                'account_id' => $account->id,
+                'platform' => $account->platform->value,
+                'error' => $e->getMessage(),
+            ]);
 
             return true;
         } catch (TokenExpiredException $e) {
