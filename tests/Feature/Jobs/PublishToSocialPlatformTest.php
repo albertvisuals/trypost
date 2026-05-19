@@ -110,6 +110,36 @@ test('publish to social platform marks account as token expired on auth failure'
     expect($this->socialAccount->status)->toBe(AccountStatus::TokenExpired);
 });
 
+test('publish does NOT mark account expired when retry refresh hits platform unavailable', function () {
+    Event::fake();
+    Mail::fake();
+
+    // Publisher first throws TokenExpired (401-style), the retry-refresh
+    // path goes through ConnectionVerifier::verify which can in turn raise
+    // PlatformUnavailable if the platform is down. The account must stay
+    // Connected — it was the platform that failed, not the token.
+    $publisher = Mockery::mock(LinkedInPublisher::class);
+    $publisher->shouldReceive('publish')->andThrow(new TokenExpiredException('Token expired', '401'));
+
+    $verifier = Mockery::mock(ConnectionVerifier::class);
+    $verifier->shouldReceive('verify')->andThrow(
+        new PlatformUnavailableException('LinkedIn API returned 503 during token refresh', 503)
+    );
+
+    $this->app->instance(LinkedInPublisher::class, $publisher);
+    $this->app->instance(ConnectionVerifier::class, $verifier);
+
+    (new PublishToSocialPlatform($this->postPlatform))->handle();
+
+    $this->postPlatform->refresh();
+    $this->socialAccount->refresh();
+
+    expect($this->postPlatform->status)->toBe(PlatformStatus::Failed);
+    expect($this->postPlatform->error_context['category'] ?? null)->toBe('platform_unavailable');
+    expect($this->postPlatform->error_context['http_status'] ?? null)->toBe(503);
+    expect($this->socialAccount->status)->toBe(AccountStatus::Connected);
+});
+
 test('publish to social platform does NOT mark account expired when platform is unavailable', function () {
     Event::fake();
     Mail::fake();

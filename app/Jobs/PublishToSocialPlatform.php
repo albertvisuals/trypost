@@ -130,6 +130,19 @@ class PublishToSocialPlatform implements ShouldQueue
                         $this->refreshAccountToken();
 
                         continue;
+                    } catch (PlatformUnavailableException $refreshError) {
+                        Log::warning('Publish skipped: platform unavailable during retry refresh', [
+                            'post_platform_id' => $this->postPlatform->id,
+                            'platform' => $this->postPlatform->platform->value,
+                            'error' => $refreshError->getMessage(),
+                        ]);
+
+                        $this->postPlatform->markAsFailed($refreshError->getMessage(), [
+                            'category' => 'platform_unavailable',
+                            'http_status' => $refreshError->httpStatus,
+                            'failed_at' => now()->toIso8601String(),
+                        ]);
+                        break;
                     } catch (\Throwable $refreshError) {
                         Log::error('Token refresh failed during publish retry', [
                             'post_platform_id' => $this->postPlatform->id,
