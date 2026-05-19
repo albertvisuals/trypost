@@ -20,6 +20,7 @@ use App\Models\User;
 use App\Models\Workspace;
 use App\Services\Social\ConnectionVerifier;
 use App\Services\Social\LinkedInPublisher;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Mail;
@@ -168,6 +169,125 @@ test('publish reschedules retry when retry-refresh path hits platform unavailabl
     expect($this->socialAccount->status)->toBe(AccountStatus::Connected);
 
     Bus::assertDispatched(PublishToSocialPlatform::class);
+});
+
+test('publish reschedules retry exactly 10 minutes into the future', function () {
+    Bus::fake([PublishToSocialPlatform::class]);
+    Event::fake();
+    Mail::fake();
+
+    $now = now()->startOfMinute();
+    Carbon::setTestNow($now);
+
+    $publisher = Mockery::mock(LinkedInPublisher::class);
+    $publisher->shouldReceive('publish')->andThrow(
+        new PlatformUnavailableException('LinkedIn 503', 503)
+    );
+    $this->app->instance(LinkedInPublisher::class, $publisher);
+
+    (new PublishToSocialPlatform($this->postPlatform))->handle();
+
+    $this->postPlatform->refresh();
+
+    // error_context tracks the next attempt — must be exactly +10 min
+    expect($this->postPlatform->error_context['next_attempt_at'] ?? null)
+        ->toBe($now->copy()->addMinutes(10)->toIso8601String());
+
+    // The actual dispatched job carries the same delay
+    Bus::assertDispatched(PublishToSocialPlatform::class, function ($job) use ($now) {
+        // $job->delay is a Carbon|DateInterval|int set by ->delay(...)
+        $delayAt = $job->delay instanceof DateTimeInterface
+            ? Carbon::instance($job->delay)
+            : null;
+
+        return $delayAt !== null
+            && $delayAt->equalTo($now->copy()->addMinutes(10));
+    });
+
+    Carbon::setTestNow();
+});
+
+test('publish records last_attempt_at when rescheduling for retry', function () {
+    Bus::fake([PublishToSocialPlatform::class]);
+    Event::fake();
+    Mail::fake();
+
+    $now = now()->startOfMinute();
+    Carbon::setTestNow($now);
+
+    $publisher = Mockery::mock(LinkedInPublisher::class);
+    $publisher->shouldReceive('publish')->andThrow(
+        new PlatformUnavailableException('LinkedIn 503', 503)
+    );
+    $this->app->instance(LinkedInPublisher::class, $publisher);
+
+    (new PublishToSocialPlatform($this->postPlatform))->handle();
+
+    $this->postPlatform->refresh();
+
+    expect($this->postPlatform->error_context['last_attempt_at'] ?? null)
+        ->toBe($now->toIso8601String());
+
+    Carbon::setTestNow();
+});
+
+test('post stays in Publishing while one platform is still Retrying', function () {
+    Bus::fake([PublishToSocialPlatform::class]);
+    Event::fake();
+    Mail::fake();
+
+    // Second LinkedIn account on the same post — first one will publish OK,
+    // second one will hit PlatformUnavailable and reschedule.
+    $secondAccount = SocialAccount::factory()->linkedin()->create(['workspace_id' => $this->workspace->id]);
+    $secondPlatform = PostPlatform::factory()->linkedin()->create([
+        'post_id' => $this->post->id,
+        'social_account_id' => $secondAccount->id,
+        'enabled' => true,
+        'status' => PlatformStatus::Published,  // simulate already published
+        'platform_post_id' => 'sibling-123',
+    ]);
+
+    // Start the post as Publishing so updatePostStatus sees the in-flight context
+    $this->post->update(['status' => PostStatus::Publishing]);
+
+    $publisher = Mockery::mock(LinkedInPublisher::class);
+    $publisher->shouldReceive('publish')->andThrow(
+        new PlatformUnavailableException('LinkedIn 503', 503)
+    );
+    $this->app->instance(LinkedInPublisher::class, $publisher);
+
+    (new PublishToSocialPlatform($this->postPlatform))->handle();
+
+    $this->postPlatform->refresh();
+    $this->post->refresh();
+
+    expect($this->postPlatform->status)->toBe(PlatformStatus::Retrying);
+    // Post is NOT finalized because one of its platforms is still pending retry.
+    expect($this->post->status)->toBe(PostStatus::Publishing);
+});
+
+test('successful publish after a retry transitions the platform to Published', function () {
+    // Pre-condition: this platform already failed once and is currently Retrying.
+    $this->postPlatform->update([
+        'status' => PlatformStatus::Retrying,
+        'error_context' => ['retry_count' => 3, 'category' => 'platform_unavailable'],
+    ]);
+
+    Event::fake();
+
+    $publisher = Mockery::mock(LinkedInPublisher::class);
+    $publisher->shouldReceive('publish')->andReturn([
+        'id' => 'post-after-retry',
+        'url' => 'https://linkedin.com/post/after-retry',
+    ]);
+    $this->app->instance(LinkedInPublisher::class, $publisher);
+
+    (new PublishToSocialPlatform($this->postPlatform))->handle();
+
+    $this->postPlatform->refresh();
+
+    expect($this->postPlatform->status)->toBe(PlatformStatus::Published);
+    expect($this->postPlatform->platform_post_id)->toBe('post-after-retry');
 });
 
 test('publish retry count increments across successive platform_unavailable attempts', function () {
