@@ -34,13 +34,16 @@ beforeEach(function () {
 });
 
 test('linkedin page analytics refresh hits the configured oauth host', function () {
+    $oauthApi = config('trypost.platforms.linkedin.oauth_api');
+    $api = config('trypost.platforms.linkedin-page.api');
+
     Http::fake([
-        'www.linkedin.com/oauth/v2/accessToken' => Http::response([
+        "{$oauthApi}/oauth/v2/accessToken" => Http::response([
             'access_token' => 'new_token',
             'refresh_token' => 'new_refresh_token',
             'expires_in' => 5184000,
         ], 200),
-        'api.linkedin.com/rest/socialActions/*' => Http::response([
+        "{$api}/rest/socialActions/*" => Http::response([
             'likesSummary' => ['totalLikes' => 0],
             'commentsSummary' => ['aggregatedTotalComments' => 0],
         ], 200),
@@ -48,8 +51,5 @@ test('linkedin page analytics refresh hits the configured oauth host', function 
 
     (new LinkedInPageAnalytics)->fetchPostMetrics($this->postPlatform);
 
-    Http::assertSent(fn ($request) => str_contains(
-        $request->url(),
-        rtrim((string) config('trypost.platforms.linkedin.oauth_api'), '/').'/oauth/v2/accessToken'
-    ));
+    Http::assertSent(fn ($request) => str_contains($request->url(), "{$oauthApi}/oauth/v2/accessToken"));
 });
