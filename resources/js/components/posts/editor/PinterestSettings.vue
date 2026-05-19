@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { usePage } from '@inertiajs/vue3';
 import { IconAlertTriangle, IconChevronDown, IconChevronUp } from '@tabler/icons-vue';
 import { computed, ref } from 'vue';
 
@@ -16,6 +15,7 @@ import {
     ComboboxTrigger,
 } from '@/components/ui/combobox';
 import { getMediaValidationWarning, type MediaItem } from '@/composables/useMedia';
+import { usePageErrors } from '@/composables/usePageErrors';
 import { getPlatformLogo } from '@/composables/usePlatformLogo';
 import { ContentType } from '@/enums/content-type';
 import type { PinterestBoard } from '@/types';
@@ -79,11 +79,10 @@ const selectedBoard = computed<BoardOption | undefined>({
 // (`platforms.0.meta.board_id`). Suffix match avoids threading the index
 // through props. Cleared as soon as a board is picked locally so the user
 // doesn't see a stale error after fixing the issue.
-const page = usePage();
+const errors = usePageErrors();
 const boardError = computed<string | undefined>(() => {
     if (props.meta?.board_id) return undefined;
-    const errors = (page.props.errors as Record<string, string> | undefined) ?? {};
-    return Object.entries(errors).find(([key]) => key.endsWith('.meta.board_id'))?.[1];
+    return Object.entries(errors.value).find(([key]) => key.endsWith('.meta.board_id'))?.[1];
 });
 </script>
 

@@ -65,11 +65,14 @@ const buildDateTime = (): string => {
     return `${dateStr}T${selectedHour.value}:${selectedMinute.value}:00`;
 };
 
+const isPastDateTime = computed(() => dayjs(buildDateTime()).isBefore(dayjs()));
+
 const cancel = () => {
     open.value = false;
 };
 
 const confirm = () => {
+    if (isPastDateTime.value) return;
     const value = buildDateTime();
     emit('update:modelValue', value);
     emit('confirm', value);
@@ -112,6 +115,9 @@ const remove = () => {
                     </Select>
                     <span v-if="timezoneAbbr" class="ml-1 text-xs text-muted-foreground">{{ timezoneAbbr }}</span>
                 </div>
+                <p v-if="isPastDateTime" class="mt-2 text-xs font-semibold text-rose-700">
+                    {{ $t('posts.edit.pick_time_past') }}
+                </p>
             </div>
 
             <div class="flex items-center justify-between gap-2 border-t p-3">
@@ -126,7 +132,7 @@ const remove = () => {
                     {{ $t('posts.edit.unschedule') }}
                 </Button>
                 <Button v-else type="button" variant="ghost" size="sm" @click="cancel">{{ $t('posts.edit.cancel') }}</Button>
-                <Button type="button" size="sm" @click="confirm">{{ $t('posts.edit.pick_time') }}</Button>
+                <Button type="button" size="sm" :disabled="isPastDateTime" @click="confirm">{{ $t('posts.edit.pick_time') }}</Button>
             </div>
         </DialogContent>
     </Dialog>

@@ -16,6 +16,7 @@ import {
     getMediaIncompatibilityReason,
     usePostCompliance,
 } from '@/composables/usePostCompliance';
+import date from '@/date';
 import dayjs from '@/dayjs';
 import debounce from '@/debounce';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -156,11 +157,7 @@ const {
 });
 
 // Schedule
-const getLocalSchedule = () => {
-    if (!post.value.scheduled_at) return '';
-    return dayjs.utc(post.value.scheduled_at).local().format('YYYY-MM-DDTHH:mm:00');
-};
-const scheduledDateTime = ref(getLocalSchedule());
+const scheduledDateTime = ref(date.formatUtcForDateTimeLocalInput(post.value.scheduled_at));
 const hasPickedTime = ref(post.value.status === PostStatus.Scheduled && !! post.value.scheduled_at);
 
 const pickTimeLabel = computed(() => {

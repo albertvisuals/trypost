@@ -87,6 +87,10 @@ const CONTENT_TYPE_RULES: Record<string, MediaRules> = {
         acceptsGif: false,
         // maxVideoDurationSec is enforced dynamically via creator_info
     },
+    tiktok_photo: {
+        maxFiles: 35, minFiles: 1, acceptImages: true, acceptVideos: false, requiresMedia: true,
+        acceptsGif: false,
+    },
 
     // YouTube
     youtube_short: {

@@ -240,6 +240,7 @@ return [
         'no_labels' => 'No labels created yet',
         'schedule' => 'Schedule',
         'pick_time' => 'Pick time',
+        'pick_time_past' => 'Pick a future date and time.',
         'post_now' => 'Post now',
         'time' => 'Time',
         'cancel' => 'Cancel',

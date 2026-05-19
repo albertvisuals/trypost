@@ -4,6 +4,7 @@ import { trans } from 'laravel-vue-i18n';
 import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 
+import InputError from '@/components/InputError.vue';
 import { Avatar } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -42,6 +43,7 @@ interface Props {
     creatorInfo?: CreatorInfo | null;
     videoDurationSec?: number | null;
     contentType: string;
+    contentTypeError?: string;
     meta: Record<string, any>;
     disabled?: boolean;
 }
@@ -49,6 +51,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
     creatorInfo: null,
     videoDurationSec: null,
+    contentTypeError: undefined,
     disabled: false,
 });
 
@@ -232,6 +235,7 @@ watch(
                         {{ $t(variant.labelKey) }}
                     </button>
                 </div>
+                <InputError :message="contentTypeError" />
             </div>
 
             <!-- Creator identity -->

@@ -166,6 +166,17 @@ export default {
     },
 
     /**
+     * Converte uma data UTC para o formato esperado por inputs HTML `datetime-local`
+     * (YYYY-MM-DDTHH:mm:00) no timezone do usuário.
+     * @param date - Data em UTC (ISO string) ou nulo
+     * @returns String no formato YYYY-MM-DDTHH:mm:00 ou string vazia quando não houver data
+     */
+    formatUtcForDateTimeLocalInput(date: string | null | undefined): string {
+        if (!date) return '';
+        return dayjs.utc(date).tz(getUserTimezone()).format('YYYY-MM-DDTHH:mm:00');
+    },
+
+    /**
      * Formata minutos para formato legível
      * @param minutes - Número de minutos
      * @returns String formatada (ex: "1h", "1h 41min", "30min")

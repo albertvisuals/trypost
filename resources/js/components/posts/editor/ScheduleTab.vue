@@ -11,6 +11,7 @@ import TikTokSettings from '@/components/posts/editor/TikTokSettings.vue';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { usePageErrors } from '@/composables/usePageErrors';
 import { getPlatformLabel, getPlatformLogo } from '@/composables/usePlatformLogo';
 import { Platform } from '@/enums/platform';
 import type { PinterestBoard } from '@/types';
@@ -152,6 +153,24 @@ const getPlatformDisplayName = (pp: PostPlatform): string =>
 const getPlatformAvatar = (pp: PostPlatform): string | null =>
     pp.social_account?.avatar_url ?? pp.platform_avatar ?? null;
 
+// Map pp.id → submit-array index, matching what Edit.vue sends as `platforms[i]`.
+// Backend validation errors are keyed `platforms.{i}.content_type`, so we use this
+// to surface the right error under each platform's variant picker.
+const errors = usePageErrors();
+const submitIndexByPpId = computed<Record<string, number>>(() => {
+    const map: Record<string, number> = {};
+    props.postPlatforms
+        .filter((pp) => props.selectedPlatformIds.includes(pp.id))
+        .forEach((pp, index) => { map[pp.id] = index; });
+    return map;
+});
+
+const contentTypeErrorFor = (pp: PostPlatform): string | undefined => {
+    const index = submitIndexByPpId.value[pp.id];
+    if (index === undefined) return undefined;
+    return errors.value[`platforms.${index}.content_type`];
+};
+
 </script>
 
 <template>
@@ -274,6 +293,7 @@ const getPlatformAvatar = (pp: PostPlatform): string | null =>
                 :creator-info="getCreatorInfo(pp)"
                 :video-duration-sec="videoDurationSec"
                 :content-type="platformContentTypes[pp.id] ?? ''"
+                :content-type-error="contentTypeErrorFor(pp)"
                 :meta="platformMeta[pp.id] ?? {}"
                 :disabled="isReadOnly"
                 @update:content-type="emit('update:platformContentType', pp.id, $event)"

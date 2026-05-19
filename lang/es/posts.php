@@ -262,6 +262,7 @@ return [
         'organize' => 'Organizar',
         'no_labels' => 'Todavía no hay etiquetas creadas',
         'pick_time' => 'Elegir hora',
+        'pick_time_past' => 'Elige una fecha y hora en el futuro.',
         'post_now' => 'Publicar ahora',
         'time' => 'Hora',
         'cancel' => 'Cancelar',
