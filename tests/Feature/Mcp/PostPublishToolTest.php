@@ -116,7 +116,7 @@ test('update post rejects posts in any terminal state', function (PostStatus $st
     $response = TryPostServer::actingAs($this->user)
         ->tool(UpdatePostTool::class, ['post_id' => $post->id, 'content' => 'x']);
 
-    $response->assertHasErrors(['Cannot edit a published post.']);
+    $response->assertHasErrors(['Cannot edit a post in a terminal state.']);
 })->with([
     PostStatus::Published,
     PostStatus::PartiallyPublished,

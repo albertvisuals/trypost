@@ -55,7 +55,7 @@ class UpdatePostTool extends Tool
         $result = UpdatePost::execute($workspace, $post, $payload);
 
         if (data_get($result, 'action') === PostAction::Finalized) {
-            return Response::error('Cannot edit a published post.');
+            return Response::error('Cannot edit a post in a terminal state.');
         }
 
         /** @var Post $updated */

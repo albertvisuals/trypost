@@ -69,7 +69,7 @@ class PostController extends Controller
 
         if (data_get($result, 'action') === PostAction::Finalized) {
             return response()->json(
-                ['message' => 'Cannot edit a published post.'],
+                ['message' => 'Cannot edit a post in a terminal state.'],
                 Response::HTTP_UNPROCESSABLE_ENTITY
             );
         }

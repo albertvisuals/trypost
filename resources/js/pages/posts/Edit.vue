@@ -20,7 +20,7 @@ import { ContentType } from '@/enums/content-type';
 import { Platform } from '@/enums/platform';
 import { PostStatus } from '@/types/post';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { destroy as destroyPost, update as updatePost } from '@/routes/app/posts';
+import { destroy as destroyPost, show as showPost, update as updatePost } from '@/routes/app/posts';
 import type { PinterestBoard } from '@/types';
 
 interface MediaItem {
@@ -514,12 +514,15 @@ const unschedulePost = () => {
     submit(PostStatus.Draft);
 };
 
-// Echo: listen for real-time platform status updates.
-// Event fires when any post_platform completes publishing (success or fail).
-// Full reload of the post prop so the new status + post_platforms propagate and
-// the overlay dismisses.
 usePostEcho(post.value.id, '.post.platform.status.updated', () => {
-    router.reload({ only: ['post'] });
+    router.reload({
+        only: ['post'],
+        onSuccess: () => {
+            if (READONLY_STATUSES.includes(post.value.status)) {
+                router.visit(showPost.url(post.value.id));
+            }
+        },
+    });
 });
 
 

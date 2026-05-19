@@ -49,7 +49,7 @@ class FacebookPublisher
     {
         // Text only post
         if ($media->isEmpty()) {
-            if (empty($content)) {
+            if ($content === null || $content === '') {
                 throw new \Exception('Facebook text posts require content. Please add text to your post.');
             }
 
@@ -107,7 +107,7 @@ class FacebookPublisher
             'access_token' => $accessToken,
         ];
 
-        if (! empty($content)) {
+        if ($content !== null && $content !== '') {
             $payload['message'] = $content;
         }
 
@@ -167,7 +167,7 @@ class FacebookPublisher
             'access_token' => $accessToken,
         ];
 
-        if (! empty($content)) {
+        if ($content !== null && $content !== '') {
             $postData['message'] = $content;
         }
 
@@ -201,7 +201,7 @@ class FacebookPublisher
             'access_token' => $accessToken,
         ];
 
-        if (! empty($content)) {
+        if ($content !== null && $content !== '') {
             $payload['description'] = $content;
         }
 
@@ -306,7 +306,7 @@ class FacebookPublisher
             'access_token' => $accessToken,
         ];
 
-        if (! empty($content)) {
+        if ($content !== null && $content !== '') {
             $finishPayload['description'] = $content;
         }
 
