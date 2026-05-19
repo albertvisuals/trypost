@@ -145,7 +145,7 @@ class AssetController extends Controller
         $filename = Str::uuid().'.'.$extension;
         $path = 'medias/'.$filename;
 
-        Storage::disk('public')->put($path, $response->body());
+        Storage::put($path, $response->body());
 
         $meta = [];
         $tempFile = tempnam(sys_get_temp_dir(), 'unsplash');
