@@ -69,6 +69,8 @@ class TemplateImageGenerator
             orientation: $orientation,
             language: $language,
             brandColor: $workspace->brand_color,
+            backgroundColor: $workspace->background_color,
+            textColor: $workspace->text_color,
             brandDescription: $workspace->brand_description,
         );
         if ($imageData === null) {
@@ -114,6 +116,9 @@ class TemplateImageGenerator
                 'body' => $body,
                 'width' => $this->width,
                 'height' => $this->height,
+                'brand_color' => $workspace->brand_color,
+                'background_color' => $workspace->background_color,
+                'text_color' => $workspace->text_color,
             ],
         ];
     }

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Ai;
 
 use App\Enums\Workspace\ImageStyle;
-use App\Support\HexColorName;
+use App\Support\BrandImagePalette;
 use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Image;
 use Throwable;
@@ -28,6 +28,8 @@ class AiImageClient
         string $orientation = 'portrait',
         string $language = 'en',
         ?string $brandColor = null,
+        ?string $backgroundColor = null,
+        ?string $textColor = null,
         ?string $brandDescription = null,
         string $quality = 'low',
         int $timeout = 180,
@@ -37,9 +39,11 @@ class AiImageClient
             return null;
         }
 
-        $brandColorName = $brandColor !== null
-            ? HexColorName::approximate($brandColor)
-            : null;
+        $palette = new BrandImagePalette(
+            brandColor: $brandColor,
+            backgroundColor: $backgroundColor,
+            textColor: $textColor,
+        );
 
         $brandContext = null;
         if ($brandDescription !== null) {
@@ -55,7 +59,10 @@ class AiImageClient
             'style' => $style->value,
             'scene' => implode(', ', $clean),
             'language_name' => $this->languageName($language),
-            'brand_color_name' => $brandColorName,
+            'has_brand_palette' => $palette->isDefined(),
+            'brand_color_name' => $palette->brandColorName,
+            'background_color_name' => $palette->backgroundColorName,
+            'text_color_name' => $palette->textColorName,
             'brand_context' => $brandContext,
         ])->render();
 

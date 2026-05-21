@@ -78,8 +78,13 @@ test('renders a slide and stores webp when AI returns bytes', function () use ($
             ->toHaveKey('keywords')
             ->toHaveKey('style', 'illustration')
             ->toHaveKey('model', 'gpt-image-2')
-            ->toHaveKey('title', 'Hello World');
+            ->toHaveKey('title', 'Hello World')
+            ->toHaveKey('brand_color', '#0000ff')
+            ->toHaveKey('background_color', '#ffffff')
+            ->toHaveKey('text_color', '#000000');
     }
 
-    Image::assertGenerated(fn ($prompt) => $prompt->contains('kitchen'));
+    Image::assertGenerated(fn ($prompt) => $prompt->contains('kitchen')
+        && $prompt->contains('BRAND COLOR PALETTE')
+        && $prompt->contains('blue'));
 })->skip(fn () => ! extension_loaded('gd'), 'GD extension required');

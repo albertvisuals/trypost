@@ -28,6 +28,7 @@ This project has domain-specific skills in `.claude/skills/` (e.g. `pest-testing
 ## Conventions
 
 - Follow existing code conventions. Check sibling files for structure, approach and naming before creating or editing.
+- In Vue `<DialogFooter>`, primary action button first in markup, then cancel/secondary (see `vue-typescript.mdc` and `CLAUDE.md`).
 - Use descriptive names (`isRegisteredForDiscounts`, not `discount()`).
 - Reuse existing components before writing new ones.
 - Stick to existing directory structure. Do not create new base folders without approval.

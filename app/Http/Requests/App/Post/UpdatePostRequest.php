@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\App\Post;
 
+use App\Enums\Media\Source;
 use App\Enums\Post\Status;
 use App\Enums\PostPlatform\ContentType;
 use App\Enums\SocialAccount\Platform;
@@ -49,6 +50,8 @@ class UpdatePostRequest extends FormRequest
             'media.*.original_filename' => ['sometimes', 'nullable', 'string', 'max:500'],
             'media.*.size' => ['sometimes', 'nullable', 'integer'],
             'media.*.meta' => ['sometimes', 'nullable', 'array'],
+            'media.*.source' => ['sometimes', 'nullable', 'string', Rule::in(array_column(Source::cases(), 'value'))],
+            'media.*.source_meta' => ['sometimes', 'nullable', 'array'],
             'scheduled_at' => [
                 'sometimes',
                 'nullable',

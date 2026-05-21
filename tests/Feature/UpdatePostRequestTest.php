@@ -492,3 +492,36 @@ test('scheduling across multiple platforms enforces the strictest content-length
     $response->assertSessionHasErrors('content');
     expect(session('errors')->get('content')[0])->toContain('Threads');
 });
+
+test('draft save accepts media source metadata for ai regeneration', function () {
+    $payload = [
+        [
+            'id' => 'media-ai-keep-meta',
+            'path' => 'ai-images/generated.webp',
+            'url' => 'https://example.com/ai-images/generated.webp',
+            'type' => 'image',
+            'mime_type' => 'image/webp',
+            'source' => 'ai',
+            'source_meta' => [
+                'title' => 'Fix ECP typo',
+                'body' => 'Body copy',
+                'keywords' => ['marketing', 'automation'],
+                'width' => 1080,
+                'height' => 1350,
+            ],
+        ],
+    ];
+
+    $response = $this->actingAs($this->user)
+        ->put(route('app.posts.update', $this->post), [
+            'status' => Status::Draft->value,
+            'media' => $payload,
+            'platforms' => [],
+        ]);
+
+    $response->assertSessionDoesntHaveErrors();
+
+    $this->post->refresh();
+    expect(data_get($this->post->media, '0.source'))->toBe('ai');
+    expect(data_get($this->post->media, '0.source_meta.title'))->toBe('Fix ECP typo');
+});

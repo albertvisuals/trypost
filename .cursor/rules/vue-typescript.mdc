@@ -42,6 +42,21 @@ This project uses `@tabler/icons-vue` for all icons. NEVER use `lucide-vue-next`
 - Import routes from `@/routes/...` — e.g. `import { store } from '@/routes/login'`.
 - Import controller actions from `@/actions/...`.
 
+## Dialogs
+
+In `<DialogFooter>`, put the **primary action button first** in the markup, then secondary/cancel.
+
+`DialogFooter` (`resources/js/components/ui/dialog/DialogFooter.vue`) uses `flex-col-reverse` on mobile and `sm:flex-row sm:justify-start` on desktop — the first child is the leftmost action on larger screens.
+
+```vue
+<DialogFooter>
+    <Button @click="submit">{{ $t('...submit') }}</Button>
+    <Button variant="outline" @click="open = false">{{ $t('common.cancel') }}</Button>
+</DialogFooter>
+```
+
+Check sibling dialogs in the same feature before inventing a new footer layout.
+
 ## Form validation
 
 NEVER use HTML5 validation attributes (`required`, `minlength`, `pattern`, etc.) on form inputs. Always rely solely on backend validation.

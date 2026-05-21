@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Actions\Ai\AutofillBrand;
 use App\Ai\Agents\BrandAnalyzer;
+use App\Services\Brand\BrandMetadata;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Facades\Http;
 
@@ -423,6 +424,22 @@ test('falls back to meta tags when BrandAnalyzer throws', function () {
     expect($result->language)->toBe('en');
     expect($result->tone)->toBeNull();
     expect($result->voiceNotes)->toBeNull();
+});
+
+test('toArray swaps site background and text colours for the image palette fields', function () {
+    $metadata = new BrandMetadata(
+        brandColor: '#eab308',
+        backgroundColor: '#ffffff',
+        textColor: '#1f2937',
+    );
+
+    $array = $metadata->toArray();
+
+    expect($array['background_color'])->toBe('#1f2937')
+        ->and($array['text_color'])->toBe('#ffffff')
+        ->and($array['brand_color'])->toBe('#eab308')
+        ->and($metadata->backgroundColor)->toBe('#ffffff')
+        ->and($metadata->textColor)->toBe('#1f2937');
 });
 
 test('BrandMetadata toArray exposes the shape the controller expects', function () {

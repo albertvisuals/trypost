@@ -3,10 +3,13 @@ import { getMediaRulesForContentType } from '@/composables/useMediaRules';
 export interface MediaItem {
     id: string;
     url: string;
+    path?: string;
     type?: string;
     mime_type?: string;
     original_filename?: string;
     size?: number;
+    source?: 'ai' | 'unsplash' | 'giphy';
+    source_meta?: Record<string, unknown>;
     meta?: {
         width?: number;
         height?: number;

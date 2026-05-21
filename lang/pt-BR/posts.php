@@ -213,6 +213,26 @@ return [
             'applied' => 'Aplicada',
             'cancel' => 'Cancelar',
         ],
+        'image_regenerate' => [
+            'button' => 'Ajustar',
+            'title' => 'Ajustar imagem com IA',
+            'description' => 'Descreva a correção. A nova imagem substitui a atual e mantém a posição no carrossel.',
+            'instruction_label' => 'Instrução',
+            'instruction_placeholder' => 'ex: Corrigir o erro no título e deixar o fundo mais claro.',
+            'processing' => 'Regenerando imagem... isso pode levar alguns segundos.',
+            'submit' => 'Regenerar imagem',
+            'cancel' => 'Cancelar',
+            'success' => 'Imagem atualizada. A nova versão substituiu a anterior no post.',
+            'fallback_title' => 'Melhore esta copy da imagem',
+            'errors' => [
+                'required' => 'A instrução é obrigatória.',
+                'start_failed' => 'Não foi possível iniciar a regeneração.',
+                'unavailable' => 'Não foi possível regenerar esta imagem agora.',
+                'timeout' => 'A regeneração está demorando mais que o esperado. Tente de novo em instantes.',
+                'media_not_found' => 'Mídia não encontrada.',
+                'not_ai_media' => 'Só é possível regenerar mídia gerada por IA.',
+            ],
+        ],
     ],
 
     'show' => [

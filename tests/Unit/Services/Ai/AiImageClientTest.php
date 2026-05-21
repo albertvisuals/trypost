@@ -90,32 +90,43 @@ test('generate defaults to English instruction when language is unknown', functi
     Image::assertGenerated(fn (ImagePrompt $prompt) => $prompt->contains('English'));
 });
 
-test('generate appends brand color accent when brandColor is provided', function () {
+test('generate appends brand palette when workspace colours are provided', function () {
     Image::fake();
 
     $client = new AiImageClient;
-    $client->generate(['x'], ImageStyle::Cinematic, brandColor: '#f47b20');
+    $client->generate(
+        ['x'],
+        ImageStyle::Infographic,
+        brandColor: '#facc15',
+        backgroundColor: '#ffffff',
+        textColor: '#0f172a',
+    );
 
-    Image::assertGenerated(fn (ImagePrompt $prompt) => $prompt->contains('warm orange')
-        && $prompt->contains('small accent'));
+    Image::assertGenerated(fn (ImagePrompt $prompt) => $prompt->contains('BRAND COLOR PALETTE')
+        && $prompt->contains('golden yellow')
+        && $prompt->contains('charts, bars')
+        && $prompt->contains('off-white')
+        && $prompt->contains('in-scene typography'));
 });
 
-test('generate omits brand color accent when brandColor is null', function () {
+test('generate omits brand palette when no workspace colours are set', function () {
     Image::fake();
 
     $client = new AiImageClient;
     $client->generate(['x'], ImageStyle::Cinematic);
 
-    Image::assertGenerated(fn (ImagePrompt $prompt) => ! $prompt->contains('small accent'));
+    Image::assertGenerated(fn (ImagePrompt $prompt) => ! $prompt->contains('BRAND COLOR PALETTE'));
 });
 
-test('generate skips accent when brandColor hex is malformed', function () {
+test('generate includes only valid colours in the palette', function () {
     Image::fake();
 
     $client = new AiImageClient;
-    $client->generate(['x'], ImageStyle::Cinematic, brandColor: 'not-a-hex');
+    $client->generate(['x'], ImageStyle::Cinematic, brandColor: 'not-a-hex', backgroundColor: '#ffffff');
 
-    Image::assertGenerated(fn (ImagePrompt $prompt) => ! $prompt->contains('small accent'));
+    Image::assertGenerated(fn (ImagePrompt $prompt) => $prompt->contains('BRAND COLOR PALETTE')
+        && $prompt->contains('off-white')
+        && ! $prompt->contains('Brand / primary accent'));
 });
 
 test('generate appends brand context when brandDescription is provided', function () {

@@ -67,6 +67,12 @@ final readonly class BrandMetadata
     }
 
     /**
+     * Shape returned to the workspace / brand forms after autofill.
+     *
+     * Site extraction keeps the literal page background and body text colours.
+     * For AI image generation we swap them: page text (usually dark) becomes
+     * image background, and page background (usually light) becomes in-image text.
+     *
      * @return array{name: ?string, brand_description: ?string, content_language: ?string, brand_tone: ?string, brand_voice_notes: ?string, brand_color: ?string, background_color: ?string, text_color: ?string, logo_url: ?string}
      */
     public function toArray(): array
@@ -78,8 +84,8 @@ final readonly class BrandMetadata
             'brand_tone' => $this->tone,
             'brand_voice_notes' => $this->voiceNotes,
             'brand_color' => $this->brandColor,
-            'background_color' => $this->backgroundColor,
-            'text_color' => $this->textColor,
+            'background_color' => $this->textColor,
+            'text_color' => $this->backgroundColor,
             'logo_url' => $this->logoUrl,
         ];
     }

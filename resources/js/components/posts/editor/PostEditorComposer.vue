@@ -5,6 +5,7 @@ import {
     IconHash,
     IconLibraryPhoto,
     IconMoodSmile,
+    IconRefresh,
     IconSparkles,
     IconTrash,
     IconVideo,
@@ -30,6 +31,8 @@ interface MediaItem {
     mime_type?: string;
     original_filename?: string;
     size?: number;
+    source?: 'ai' | 'unsplash' | 'giphy';
+    source_meta?: Record<string, unknown>;
     meta?: { width?: number; height?: number; duration?: number };
 }
 
@@ -49,11 +52,17 @@ interface MediaIssue {
     reason: string;
 }
 
-const props = defineProps<{
-    signatures: Signature[];
-    platformLimits: PlatformLimit[];
-    mediaIssues: Record<string, MediaIssue[]>;
-}>();
+const props = withDefaults(
+    defineProps<{
+        signatures: Signature[];
+        platformLimits: PlatformLimit[];
+        mediaIssues: Record<string, MediaIssue[]>;
+        allowAiRegenerate?: boolean;
+    }>(),
+    {
+        allowAiRegenerate: true,
+    },
+);
 
 const content = defineModel<string>('content', { required: true });
 const media = defineModel<MediaItem[]>('media', { required: true });
@@ -61,6 +70,7 @@ const media = defineModel<MediaItem[]>('media', { required: true });
 const emit = defineEmits<{
     (e: 'open-ai-generate'): void;
     (e: 'open-ai-review'): void;
+    (e: 'open-ai-regenerate-image', mediaId: string): void;
 }>();
 
 const emojiOpen = ref(false);
@@ -210,6 +220,7 @@ const onMediaKeydown = async (event: KeyboardEvent, index: number) => {
 };
 
 const issueLabel = (reason: string): string => trans(`posts.form.warnings.${reason}`);
+const canRegenerateWithAi = (item: MediaItem): boolean => props.allowAiRegenerate && item.source === 'ai';
 </script>
 
 <template>
@@ -295,6 +306,16 @@ const issueLabel = (reason: string): string => trans(`posts.form.warnings.${reas
                         >
                             <IconGripVertical class="size-3.5" />
                         </span>
+
+                        <button
+                            v-if="canRegenerateWithAi(item)"
+                            type="button"
+                            class="absolute bottom-1.5 left-1.5 inline-flex h-6 cursor-pointer items-center gap-1 rounded-md border-2 border-foreground bg-card px-1.5 text-[10px] font-semibold text-foreground opacity-0 shadow-2xs transition-all hover:bg-violet-100 group-hover:opacity-100 group-focus:opacity-100"
+                            @click.stop="emit('open-ai-regenerate-image', item.id)"
+                        >
+                            <IconRefresh class="size-3" />
+                            {{ $t('posts.ai.image_regenerate.button') }}
+                        </button>
 
                         <button
                             type="button"

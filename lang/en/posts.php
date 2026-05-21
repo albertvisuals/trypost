@@ -213,6 +213,26 @@ return [
             'applied' => 'Applied',
             'cancel' => 'Cancel',
         ],
+        'image_regenerate' => [
+            'button' => 'Adjust',
+            'title' => 'Adjust AI image',
+            'description' => 'Describe the correction. The new image replaces the current one and keeps its position in the carousel.',
+            'instruction_label' => 'Instruction',
+            'instruction_placeholder' => 'e.g. Fix the typo in the headline and make the background lighter.',
+            'processing' => 'Regenerating image... this can take a few seconds.',
+            'submit' => 'Regenerate image',
+            'cancel' => 'Cancel',
+            'success' => 'Image updated. The new version replaced the previous one in your post.',
+            'fallback_title' => 'Improve this image copy',
+            'errors' => [
+                'required' => 'Instruction is required.',
+                'start_failed' => 'Failed to start regeneration.',
+                'unavailable' => 'Unable to regenerate this image right now.',
+                'timeout' => 'Regeneration is taking longer than expected. Try again in a moment.',
+                'media_not_found' => 'Media item not found.',
+                'not_ai_media' => 'Only AI-generated media can be regenerated.',
+            ],
+        ],
     ],
 
     'show' => [
