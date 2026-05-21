@@ -41,6 +41,9 @@ class PostImageRegenerator implements Agent, HasStructuredOutput
                 ->items($schema->string())
                 ->description('3-10 short keywords for image generation context.')
                 ->required(),
+            'regenerate_image' => $schema->boolean()
+                ->description('Whether the background image should be regenerated. Use false when only text/typo changes are needed and visual should stay the same.')
+                ->required(),
         ];
     }
 

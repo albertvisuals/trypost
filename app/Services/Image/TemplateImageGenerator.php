@@ -50,6 +50,7 @@ class TemplateImageGenerator
         array $imageKeywords,
         int $width = self::DEFAULT_WIDTH,
         int $height = self::DEFAULT_HEIGHT,
+        ?string $backgroundPath = null,
     ): ?array {
         $this->width = $width;
         $this->height = $height;
@@ -63,18 +64,33 @@ class TemplateImageGenerator
         };
         $language = $workspace->content_language;
 
-        $imageData = $this->aiImage->generate(
-            keywords: $imageKeywords,
-            style: $imageStyle,
-            orientation: $orientation,
-            language: $language,
-            brandColor: $workspace->brand_color,
-            backgroundColor: $workspace->background_color,
-            textColor: $workspace->text_color,
-            brandDescription: $workspace->brand_description,
-        );
-        if ($imageData === null) {
-            return null;
+        $generatedNewBackground = false;
+        $resolvedBackgroundPath = null;
+        $imageData = null;
+
+        if (is_string($backgroundPath) && trim($backgroundPath) !== '' && Storage::exists($backgroundPath)) {
+            $resolvedBackgroundPath = $backgroundPath;
+            $imageData = Storage::get($backgroundPath);
+        }
+
+        if (! is_string($imageData) || $imageData === '') {
+            $imageData = $this->aiImage->generate(
+                keywords: $imageKeywords,
+                style: $imageStyle,
+                orientation: $orientation,
+                language: $language,
+                brandColor: $workspace->brand_color,
+                backgroundColor: $workspace->background_color,
+                textColor: $workspace->text_color,
+                brandDescription: $workspace->brand_description,
+            );
+
+            if ($imageData === null) {
+                return null;
+            }
+
+            $generatedNewBackground = true;
+            $resolvedBackgroundPath = $this->storeBackgroundImage($imageData);
         }
 
         $manager = new ImageManager(Driver::class);
@@ -85,16 +101,18 @@ class TemplateImageGenerator
         $filename = 'ai-images/'.uniqid('slide_', true).'.webp';
         Storage::put($filename, (string) $canvas->encode(new WebpEncoder(quality: 85)));
 
-        RecordAiUsage::recordImage(
-            workspace: $workspace,
-            provider: 'openai',
-            model: AiImageClient::MODEL,
-            metadata: [
-                'image_style' => $imageStyle->value,
-                'width' => $this->width,
-                'height' => $this->height,
-            ],
-        );
+        if ($generatedNewBackground) {
+            RecordAiUsage::recordImage(
+                workspace: $workspace,
+                provider: 'openai',
+                model: AiImageClient::MODEL,
+                metadata: [
+                    'image_style' => $imageStyle->value,
+                    'width' => $this->width,
+                    'height' => $this->height,
+                ],
+            );
+        }
 
         RecordAiUsage::recordTemplate(
             workspace: $workspace,
@@ -119,8 +137,20 @@ class TemplateImageGenerator
                 'brand_color' => $workspace->brand_color,
                 'background_color' => $workspace->background_color,
                 'text_color' => $workspace->text_color,
+                'background_path' => $resolvedBackgroundPath,
             ],
         ];
+    }
+
+    private function storeBackgroundImage(string $imageData): string
+    {
+        $manager = new ImageManager(Driver::class);
+        $background = $manager->decodeBinary($imageData)->cover($this->width, $this->height);
+        $backgroundPath = 'ai-images/'.uniqid('bg_', true).'.webp';
+
+        Storage::put($backgroundPath, (string) $background->encode(new WebpEncoder(quality: 85)));
+
+        return $backgroundPath;
     }
 
     /**

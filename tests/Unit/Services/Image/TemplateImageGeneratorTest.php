@@ -81,10 +81,34 @@ test('renders a slide and stores webp when AI returns bytes', function () use ($
             ->toHaveKey('title', 'Hello World')
             ->toHaveKey('brand_color', '#0000ff')
             ->toHaveKey('background_color', '#ffffff')
-            ->toHaveKey('text_color', '#000000');
+            ->toHaveKey('text_color', '#000000')
+            ->toHaveKey('background_path');
     }
 
     Image::assertGenerated(fn ($prompt) => $prompt->contains('kitchen')
         && $prompt->contains('BRAND COLOR PALETTE')
         && $prompt->contains('blue'));
+})->skip(fn () => ! extension_loaded('gd'), 'GD extension required');
+
+test('reuses existing background path when provided', function () use ($minimalPng) {
+    if (! file_exists(base_path('resources/fonts/Inter-Bold.ttf'))) {
+        $this->markTestSkipped('Inter fonts not available — skipping render-dependent test.');
+    }
+
+    $backgroundPath = 'ai-images/reuse-bg.webp';
+    Storage::put($backgroundPath, $minimalPng());
+
+    $service = new TemplateImageGenerator(new BrandColorMapper, new AiImageClient);
+    $result = $service->render(
+        workspace: Workspace::factory()->make(),
+        socialAccount: SocialAccount::factory()->make(['username' => 'testuser', 'display_name' => 'Test User']),
+        title: 'Updated title',
+        body: 'Updated body',
+        imageKeywords: [],
+        backgroundPath: $backgroundPath,
+    );
+
+    expect($result)->not->toBeNull();
+    expect(data_get($result, 'source_meta.background_path'))->toBe($backgroundPath);
+    Image::assertNothingGenerated();
 })->skip(fn () => ! extension_loaded('gd'), 'GD extension required');

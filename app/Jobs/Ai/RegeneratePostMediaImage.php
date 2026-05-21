@@ -116,11 +116,12 @@ class RegeneratePostMediaImage implements ShouldQueue
      *   title: string,
      *   body: string,
      *   keywords: array<int, string>,
+     *   background_path: string,
      *   language: string,
      *   width: int,
      *   height: int
      * }  $baseContext
-     * @return array{title: string, body: string, keywords: array<int, string>}
+     * @return array{title: string, body: string, keywords: array<int, string>, regenerate_image: bool}
      */
     private function regenerateSlideCopy(Workspace $workspace, Post $post, array $baseContext): array
     {
@@ -154,12 +155,13 @@ class RegeneratePostMediaImage implements ShouldQueue
      *   title: string,
      *   body: string,
      *   keywords: array<int, string>,
+     *   background_path: string,
      *   language: string,
      *   width: int,
      *   height: int
      * }  $baseContext
      * @param  array<string, mixed>  $structured
-     * @return array{title: string, body: string, keywords: array<int, string>}
+     * @return array{title: string, body: string, keywords: array<int, string>, regenerate_image: bool}
      */
     private function mergeStructuredCopy(array $baseContext, array $structured): array
     {
@@ -169,11 +171,12 @@ class RegeneratePostMediaImage implements ShouldQueue
             'title' => trim((string) data_get($structured, 'title', $baseContext['title'])),
             'body' => trim((string) data_get($structured, 'body', $baseContext['body'])),
             'keywords' => $keywords !== [] ? $keywords : $baseContext['keywords'],
+            'regenerate_image' => (bool) data_get($structured, 'regenerate_image', true),
         ];
     }
 
     /**
-     * @param  array{title: string, body: string, keywords: array<int, string>}  $copy
+     * @param  array{title: string, body: string, keywords: array<int, string>, regenerate_image: bool}  $copy
      * @param  array{
      *   title: string,
      *   body: string,
@@ -196,6 +199,14 @@ class RegeneratePostMediaImage implements ShouldQueue
             throw new RuntimeException('No social account available for image footer rendering.');
         }
 
+        $reusedBackgroundPath = null;
+        if (! $copy['regenerate_image']) {
+            $reusedBackgroundPath = (string) data_get($baseContext, 'background_path', '');
+            if ($reusedBackgroundPath === '') {
+                $reusedBackgroundPath = null;
+            }
+        }
+
         $rendered = app(TemplateImageGenerator::class)->render(
             workspace: $workspace,
             socialAccount: $socialAccount,
@@ -204,6 +215,7 @@ class RegeneratePostMediaImage implements ShouldQueue
             imageKeywords: $copy['keywords'],
             width: $baseContext['width'],
             height: $baseContext['height'],
+            backgroundPath: $reusedBackgroundPath,
         );
 
         if (! $rendered) {
@@ -225,9 +237,11 @@ class RegeneratePostMediaImage implements ShouldQueue
         array $rendered,
     ): array {
         $renderedPath = $rendered['path'];
+        $newBackgroundPath = (string) data_get($rendered, 'source_meta.background_path', '');
+        $oldBackgroundPath = (string) data_get($target, 'source_meta.background_path', '');
 
         try {
-            return DB::transaction(function () use ($post, $rendered, $target, $workspace) {
+            $newMediaItem = DB::transaction(function () use ($post, $rendered, $target, $workspace) {
                 $newMediaItem = $this->buildAiMediaItem($workspace, $rendered);
 
                 $fresh = Post::query()->whereKey($post->id)->lockForUpdate()->firstOrFail();
@@ -245,8 +259,17 @@ class RegeneratePostMediaImage implements ShouldQueue
 
                 return $newMediaItem;
             });
+
+            if ($oldBackgroundPath !== '' && $oldBackgroundPath !== $newBackgroundPath && Storage::exists($oldBackgroundPath)) {
+                Storage::delete($oldBackgroundPath);
+            }
+
+            return $newMediaItem;
         } catch (Throwable $exception) {
             $this->discardRenderedFile($renderedPath);
+            if ($newBackgroundPath !== '' && $newBackgroundPath !== $oldBackgroundPath && Storage::exists($newBackgroundPath)) {
+                Storage::delete($newBackgroundPath);
+            }
 
             throw $exception;
         }
@@ -265,6 +288,7 @@ class RegeneratePostMediaImage implements ShouldQueue
      *   title: string,
      *   body: string,
      *   keywords: array<int, string>,
+     *   background_path: string,
      *   language: string,
      *   width: int,
      *   height: int
@@ -296,6 +320,7 @@ class RegeneratePostMediaImage implements ShouldQueue
             'title' => $title,
             'body' => $body,
             'keywords' => $keywords,
+            'background_path' => (string) data_get($sourceMeta, 'background_path', ''),
             'language' => (string) data_get($sourceMeta, 'language', $workspace->content_language),
             'width' => (int) data_get($sourceMeta, 'width', TemplateImageGenerator::DEFAULT_WIDTH),
             'height' => (int) data_get($sourceMeta, 'height', TemplateImageGenerator::DEFAULT_HEIGHT),
