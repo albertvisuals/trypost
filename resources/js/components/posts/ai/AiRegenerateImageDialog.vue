@@ -9,12 +9,23 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import type { MediaItem } from '@/types/media';
 import { regenerateMedia as regeneratePostAiMedia } from '@/routes/app/posts/ai';
+import type { MediaItem } from '@/types/media';
 
 interface RegenerationPayload {
     media: MediaItem;
     targetMediaId: string;
+}
+
+type RegenerationStatus = 'idle' | 'starting' | 'processing';
+
+interface RegenerationStartResponse {
+    channel?: string;
+}
+
+interface RegenerationEvent {
+    media: MediaItem | null;
+    error?: string | null;
 }
 
 const props = defineProps<{
@@ -30,7 +41,7 @@ const emit = defineEmits<{
 
 const instruction = ref('');
 const errorMessage = ref<string | null>(null);
-const status = ref<'idle' | 'starting' | 'processing'>('idle');
+const status = ref<RegenerationStatus>('idle');
 
 let subscribedChannel: string | null = null;
 let regenerationTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -42,6 +53,8 @@ const httpRegenerate = useHttp<{ instruction: string }>({
 });
 
 const isBusy = computed(() => status.value !== 'idle');
+const normalizedInstruction = computed(() => instruction.value.trim());
+const canSubmit = computed(() => normalizedInstruction.value.length > 0 && !isBusy.value);
 
 const unsubscribe = () => {
     if (subscribedChannel) {
@@ -55,6 +68,11 @@ const clearRegenerationTimeout = () => {
         clearTimeout(regenerationTimeout);
         regenerationTimeout = null;
     }
+};
+
+const setIdleWithError = (message: string) => {
+    errorMessage.value = message;
+    status.value = 'idle';
 };
 
 const resetState = () => {
@@ -71,68 +89,72 @@ const blockDismissWhileBusy = (event: Event) => {
     }
 };
 
+const handleRegenerationResult = (event: RegenerationEvent) => {
+    clearRegenerationTimeout();
+
+    if (event.error || !event.media || !props.mediaItem) {
+        setIdleWithError(event.error ?? trans('posts.ai.image_regenerate.errors.unavailable'));
+        unsubscribe();
+        return;
+    }
+
+    toast.success(trans('posts.ai.image_regenerate.success'));
+
+    emit('regenerated', {
+        media: event.media,
+        targetMediaId: props.mediaItem.id,
+    });
+
+    resetState();
+    open.value = false;
+};
+
 const subscribe = (channel: string) => {
     subscribedChannel = channel;
     status.value = 'processing';
 
     clearRegenerationTimeout();
     regenerationTimeout = setTimeout(() => {
-        errorMessage.value = trans('posts.ai.image_regenerate.errors.timeout');
-        status.value = 'idle';
+        setIdleWithError(trans('posts.ai.image_regenerate.errors.timeout'));
         unsubscribe();
     }, REGENERATION_TIMEOUT_MS);
 
     echo()
         .private(channel)
-        .listen('.ai.media.regenerated', (event: {
-            media: MediaItem | null;
-            error?: string | null;
-        }) => {
-            clearRegenerationTimeout();
-
-            if (event.error || !event.media || !props.mediaItem) {
-                errorMessage.value = event.error ?? trans('posts.ai.image_regenerate.errors.unavailable');
-                status.value = 'idle';
-                unsubscribe();
-                return;
-            }
-
-            toast.success(trans('posts.ai.image_regenerate.success'));
-
-            emit('regenerated', {
-                media: event.media,
-                targetMediaId: props.mediaItem.id,
-            });
-
-            resetState();
-            open.value = false;
-        });
+        .listen('.ai.media.regenerated', (event: RegenerationEvent) => handleRegenerationResult(event));
 };
 
 const submit = async () => {
-    if (!props.mediaItem) return;
-    if (!instruction.value.trim()) {
-        errorMessage.value = trans('posts.ai.image_regenerate.errors.required');
+    const mediaItem = props.mediaItem;
+    const instructionValue = normalizedInstruction.value;
+
+    if (!mediaItem) {
+        return;
+    }
+
+    if (!instructionValue) {
+        setIdleWithError(trans('posts.ai.image_regenerate.errors.required'));
         return;
     }
 
     errorMessage.value = null;
     status.value = 'starting';
-    httpRegenerate.instruction = instruction.value.trim();
+    httpRegenerate.instruction = instructionValue;
 
     try {
         const response = await httpRegenerate.post(
-            regeneratePostAiMedia.url({ post: props.postId, mediaId: props.mediaItem.id }),
-        ) as { channel?: string };
+            regeneratePostAiMedia.url({ post: props.postId, mediaId: mediaItem.id }),
+        ) as RegenerationStartResponse;
         const channel = String(response.channel ?? '');
+
         if (!channel) {
             throw new Error('Missing channel in regeneration response.');
         }
+
         subscribe(channel);
     } catch (error: unknown) {
-        status.value = 'idle';
         const responseMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-        errorMessage.value = responseMessage ?? trans('posts.ai.image_regenerate.errors.start_failed');
+        setIdleWithError(responseMessage ?? trans('posts.ai.image_regenerate.errors.start_failed'));
     }
 };
 
@@ -147,6 +169,7 @@ watch(open, (isOpen) => {
 });
 
 onBeforeUnmount(() => {
+    clearRegenerationTimeout();
     unsubscribe();
 });
 </script>
@@ -185,7 +208,7 @@ onBeforeUnmount(() => {
             <DialogFooter>
                 <Button
                     :loading="isBusy"
-                    :disabled="!instruction.trim()"
+                    :disabled="!canSubmit"
                     @click="submit"
                 >
                     {{ $t('posts.ai.image_regenerate.submit') }}
