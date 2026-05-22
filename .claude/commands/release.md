@@ -1,6 +1,5 @@
 ---
 description: Friday release ritual — create git tag, GitHub release (auto-generated changelog), and a customer-facing email draft (Cal.com style)
-argument-hint: "[major|minor|patch]"
 allowed-tools: Bash, Write, Read, Skill
 ---
 
@@ -23,8 +22,6 @@ Plus local mirrors in `releases/<version>/`.
 - Local vs origin/main: !`git fetch --quiet origin main 2>/dev/null; git rev-list --left-right --count HEAD...origin/main 2>/dev/null || echo "0	0"`
 - Commits since latest tag (or all if no tag): !`LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null); if [ -z "$LAST_TAG" ]; then git log --pretty=format:"%H%x09%s" --reverse; else git log "$LAST_TAG"..HEAD --pretty=format:"%H%x09%s" --reverse; fi`
 
-User bump override (optional): $ARGUMENTS
-
 ## Workflow
 
 ### Step 1 — Pre-flight checks
@@ -38,19 +35,28 @@ Stop and tell the user if any of these fail:
 
 ### Step 2 — Determine next version
 
-Parse the commit list:
+TryPost uses **sequential numbering with rollover at 9** — not standard semver. Do not parse conventional commits to choose the bump. Every release is the next sequential number, whatever the commits look like.
 
-| Trigger | Bump |
+1. If no previous tag exists → next version = **`v1.0.0`** (first release ever).
+2. Otherwise, parse the latest tag as `vMAJOR.MINOR.PATCH` and increment by these rules:
+   - `patch += 1`
+   - If `patch` reaches `10`: set `patch = 0`, `minor += 1`
+   - If `minor` reaches `10`: set `minor = 0`, `major += 1`
+3. Re-prefix with `v`.
+
+Examples:
+
+| From | To |
 |---|---|
-| `!:` in subject OR `BREAKING CHANGE:` in body | **major** |
-| Any `feat(...)` / `feat:` | **minor** |
-| Else (fix, chore, docs, refactor, perf, test, ci, build, style, merge commits) | **patch** |
+| (no tag) | v1.0.0 |
+| v1.0.0 | v1.0.1 |
+| v1.0.8 | v1.0.9 |
+| v1.0.9 | v1.1.0 |
+| v1.5.7 | v1.5.8 |
+| v1.9.8 | v1.9.9 |
+| v1.9.9 | v2.0.0 |
 
-If `$ARGUMENTS` is `major`/`minor`/`patch`, override the auto-detection.
-
-Compute next version from latest tag: strip leading `v`, bump component, zero lower components, re-prefix `v`. Example: `v0.3.2` + minor → `v0.4.0`.
-
-If **no previous tag** exists, default to `v0.1.0` (still respect user override).
+There is no manual override — the next version is whatever the rule above produces. If a release needs a different version for some special reason, the user must create the tag manually outside this command.
 
 ### Step 3 — Preview the changelog (GitHub native format)
 
@@ -174,7 +180,7 @@ The humanizer skill itself covers all patterns. Trust it.
 ### Step 6 — Confirm with the user
 
 Show:
-1. **Proposed version** + bump type with reason (e.g., "minor — there's a `feat(billing)` in the commits").
+1. **Proposed version** (e.g., `v1.0.9 → v1.1.0` — sequential rollover at 9).
 2. **Changelog preview** (Step 3 output).
 3. **Email preview**: subject line + full body (post-humanizer).
 4. **Files that will be created/pushed**:
