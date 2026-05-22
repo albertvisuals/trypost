@@ -435,7 +435,7 @@ return [
         ],
         'facebook_story' => [
             'label' => 'Story',
-            'description' => 'Desaparece após 24 horas',
+            'description' => 'Story em vídeo vertical, até 60 segundos',
         ],
         'tiktok_video' => [
             'label' => 'Vídeo',

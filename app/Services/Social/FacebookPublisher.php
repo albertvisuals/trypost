@@ -337,90 +337,55 @@ class FacebookPublisher
 
     private function publishStory(string $pageId, string $accessToken, $media): array
     {
-        $isVideo = $media->isVideo();
-
-        if ($isVideo) {
-            // Video story
-            $response = $this->facebookHttp()->post("{$this->baseUrl}/{$pageId}/video_stories", [
-                'upload_phase' => 'start',
-                'access_token' => $accessToken,
-            ]);
-
-            if ($response->failed()) {
-                $this->handleApiError($response);
-            }
-
-            $videoId = $response->json()['video_id'] ?? null;
-
-            if (! $videoId) {
-                throw new \Exception('Facebook story upload failed: no video ID returned');
-            }
-
-            // Transfer the video (Facebook accepts URL in video_file_chunk)
-            $transferResponse = $this->facebookHttp()->post("{$this->baseUrl}/{$videoId}", [
-                'upload_phase' => 'transfer',
-                'video_file_chunk' => $media->url,
-                'access_token' => $accessToken,
-            ]);
-
-            if ($transferResponse->failed()) {
-                Log::error('Facebook video story transfer failed', ['body' => $this->redactResponseBody($transferResponse->body())]);
-                $this->handleApiError($transferResponse);
-            }
-
-            // Finish the story
-            $finishResponse = $this->facebookHttp()->post("{$this->baseUrl}/{$pageId}/video_stories", [
-                'upload_phase' => 'finish',
-                'video_id' => $videoId,
-                'access_token' => $accessToken,
-            ]);
-
-            if ($finishResponse->failed()) {
-                $this->handleApiError($finishResponse);
-            }
-
-            $storyId = $finishResponse->json()['post_id'] ?? $videoId;
-
-            return [
-                'id' => $storyId,
-                'url' => "https://www.facebook.com/stories/{$pageId}/{$storyId}",
-            ];
+        if (! $media->isVideo()) {
+            throw new FacebookPublishException(
+                userMessage: 'Facebook Stories require a video file.',
+                category: ErrorCategory::MediaFormat,
+            );
         }
 
-        // Image story
-        $response = $this->facebookHttp()->post("{$this->baseUrl}/{$pageId}/photo_stories", [
-            'photo_id' => $this->uploadUnpublishedPhoto($pageId, $accessToken, $media),
+        $response = $this->facebookHttp()->post("{$this->baseUrl}/{$pageId}/video_stories", [
+            'upload_phase' => 'start',
             'access_token' => $accessToken,
         ]);
 
         if ($response->failed()) {
-            Log::error('Facebook photo story failed', [
-                'body' => $this->redactResponseBody($response->body()),
-            ]);
             $this->handleApiError($response);
         }
 
-        $storyId = $response->json()['post_id'] ?? $response->json()['id'];
+        $videoId = $response->json()['video_id'] ?? null;
+
+        if (! $videoId) {
+            throw new \Exception('Facebook story upload failed: no video ID returned');
+        }
+
+        $transferResponse = $this->facebookHttp()->post("{$this->baseUrl}/{$videoId}", [
+            'upload_phase' => 'transfer',
+            'video_file_chunk' => $media->url,
+            'access_token' => $accessToken,
+        ]);
+
+        if ($transferResponse->failed()) {
+            Log::error('Facebook video story transfer failed', ['body' => $this->redactResponseBody($transferResponse->body())]);
+            $this->handleApiError($transferResponse);
+        }
+
+        $finishResponse = $this->facebookHttp()->post("{$this->baseUrl}/{$pageId}/video_stories", [
+            'upload_phase' => 'finish',
+            'video_id' => $videoId,
+            'access_token' => $accessToken,
+        ]);
+
+        if ($finishResponse->failed()) {
+            $this->handleApiError($finishResponse);
+        }
+
+        $storyId = $finishResponse->json()['post_id'] ?? $videoId;
 
         return [
             'id' => $storyId,
             'url' => "https://www.facebook.com/stories/{$pageId}/{$storyId}",
         ];
-    }
-
-    private function uploadUnpublishedPhoto(string $pageId, string $accessToken, $media): string
-    {
-        $response = $this->facebookHttp()->post("{$this->baseUrl}/{$pageId}/photos", [
-            'url' => $media->url,
-            'published' => 'false',
-            'access_token' => $accessToken,
-        ]);
-
-        if ($response->failed()) {
-            $this->handleApiError($response);
-        }
-
-        return $response->json()['id'];
     }
 
     private function handleApiError(Response $response): never

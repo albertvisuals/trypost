@@ -68,6 +68,22 @@ test('passes when video-only content type receives a video', function () {
     expect(runMediaRule(ContentType::TikTokVideo->value, $media))->toBe([]);
     expect(runMediaRule(ContentType::YouTubeShort->value, $media))->toBe([]);
     expect(runMediaRule(ContentType::InstagramReel->value, $media))->toBe([]);
+    expect(runMediaRule(ContentType::FacebookStory->value, $media))->toBe([]);
+});
+
+test('facebook story rejects images', function () {
+    $media = [['type' => MediaType::Image->value, 'mime_type' => 'image/jpeg']];
+
+    $errors = runMediaRule(ContentType::FacebookStory->value, $media);
+
+    expect($errors)->toHaveCount(1);
+    expect($errors[0])->toContain('does not support images');
+});
+
+test('instagram story accepts images', function () {
+    $media = [['type' => MediaType::Image->value, 'mime_type' => 'image/jpeg']];
+
+    expect(runMediaRule(ContentType::InstagramStory->value, $media))->toBe([]);
 });
 
 test('detects media type from mime when type field is missing', function () {

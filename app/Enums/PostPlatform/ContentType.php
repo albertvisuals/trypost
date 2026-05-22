@@ -192,6 +192,7 @@ enum ContentType: string
     {
         return match ($this) {
             self::InstagramReel => false,
+            self::FacebookReel, self::FacebookStory => false,
             self::TikTokVideo => false,
             self::TikTokPhoto => true,
             self::YouTubeShort => false,
@@ -245,7 +246,6 @@ enum ContentType: string
             self::BlueskyPost,
             self::MastodonPost,
             self::FacebookPost,
-            self::FacebookStory,
             self::PinterestPin,
         ];
     }

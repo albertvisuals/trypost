@@ -51,9 +51,9 @@ const CONTENT_TYPE_RULES: Record<string, MediaRules> = {
         aspectRatioMin: 0.5, aspectRatioMax: 0.6,
     },
     facebook_story: {
-        maxFiles: 1, acceptImages: true, acceptVideos: true, requiresMedia: true,
+        maxFiles: 1, acceptImages: false, acceptVideos: true, requiresMedia: true,
         acceptsGif: false,
-        maxImageBytes: 4 * MB, maxVideoDurationSec: 60,
+        maxVideoBytes: 1 * GB, maxVideoDurationSec: 60,
         aspectRatioMin: 0.5, aspectRatioMax: 0.6,
     },
 

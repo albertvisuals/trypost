@@ -301,11 +301,10 @@ test('facebook publisher fails reel publish with typed exception when media down
         );
 });
 
-test('facebook publisher can publish image story', function () {
+test('facebook publisher rejects image story', function () {
     $this->postPlatform->update(['content_type' => ContentType::FacebookStory]);
 
     $this->post->update([
-
         'media' => [
             [
                 'id' => 'test-media-story',
@@ -315,23 +314,10 @@ test('facebook publisher can publish image story', function () {
                 'original_filename' => 'story.jpg',
             ],
         ],
-
     ]);
 
-    Http::fake([
-        '*/page_123/photos' => Http::response([
-            'id' => 'photo_story_123',
-        ], 200),
-        '*/page_123/photo_stories' => Http::response([
-            'post_id' => 'story_post_123',
-        ], 200),
-    ]);
-
-    $result = $this->publisher->publish($this->postPlatform);
-
-    expect($result)->toHaveKey('id');
-    expect($result['id'])->toBe('story_post_123');
-    expect($result['url'])->toContain('/stories/page_123/');
+    expect(fn () => $this->publisher->publish($this->postPlatform))
+        ->toThrow(FacebookPublishException::class, 'Facebook Stories require a video file.');
 });
 
 test('facebook publisher can publish video story', function () {

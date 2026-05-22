@@ -70,7 +70,6 @@ const AI_FORMATS: Array<{ value: ContentTypeValue; platforms: string[] }> = [
     { value: ContentType.ThreadsPost, platforms: ['threads'] },
     { value: ContentType.MastodonPost, platforms: ['mastodon'] },
     { value: ContentType.FacebookPost, platforms: ['facebook'] },
-    { value: ContentType.FacebookStory, platforms: ['facebook'] },
     { value: ContentType.PinterestPin, platforms: ['pinterest'] },
 ];
 
@@ -100,8 +99,7 @@ const isCarousel = computed(() => selectedFormat.value === ContentType.Instagram
 const requiresImage = computed(() =>
     selectedFormat.value === ContentType.FacebookPost ||
     selectedFormat.value === ContentType.PinterestPin ||
-    selectedFormat.value === ContentType.InstagramStory ||
-    selectedFormat.value === ContentType.FacebookStory,
+    selectedFormat.value === ContentType.InstagramStory,
 );
 const supportsOptionalImages = computed(() =>
     selectedFormat.value === ContentType.InstagramFeed ||
