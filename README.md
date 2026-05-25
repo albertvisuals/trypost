@@ -114,3 +114,13 @@ If TryPost is useful to you, **a star helps more people find it.** That's the mo
 <p align="center">
   Built openly by the community. <a href="https://github.com/trypost-it/trypost/stargazers">Star us on GitHub</a> and tell a friend.
 </p>
+
+---
+
+## Star History
+
+<p align="center">
+  <a href="https://www.star-history.com/?repos=trypostit%2Ftrypost&type=date&legend=top-left">
+    <img src="https://api.star-history.com/chart?repos=trypostit/trypost&type=date&legend=top-left" alt="Star History Chart" width="600">
+  </a>
+</p>
