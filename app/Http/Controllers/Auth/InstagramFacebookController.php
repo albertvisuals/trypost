@@ -28,9 +28,9 @@ class InstagramFacebookController extends SocialController
         'pages_show_list',
         'pages_read_engagement',
         'business_management',
-        'instagram_business_basic',
-        'instagram_business_content_publish',
-        'instagram_business_manage_insights',
+        'instagram_basic',
+        'instagram_content_publish',
+        'instagram_manage_insights',
     ];
 
     public function connect(Request $request): Response|RedirectResponse
